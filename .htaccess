@@ -1,0 +1,15 @@
+# MIME类型配置 - 确保.emtbytes文件能正确加载
+AddType application/octet-stream .emtbytes
+AddType application/octet-stream .psb
+
+# CORS配置 - 允许跨域访问
+Header always set Access-Control-Allow-Origin "*"
+Header always set Access-Control-Allow-Methods "GET, POST, OPTIONS"
+Header always set Access-Control-Allow-Headers "Content-Type"
+
+# 缓存配置
+<FilesMatch "\.(psb|emtbytes)$">
+    Header set Cache-Control "no-cache, no-store, must-revalidate"
+    Header set Pragma "no-cache"
+    Header set Expires 0
+</FilesMatch>
