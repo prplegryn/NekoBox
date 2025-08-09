@@ -1,0 +1,5 @@
+[33ma7faf7c[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmaster[m[33m, [m[1;31morigin/master[m[33m)[m Fix WebGL rendering error: add error handling for canvas context and WebGL operations
+[33ma982611[m Fix WebGL errors on GitHub Pages: add error handling and fallback initialization
+[33ma051008[m Fix mobile issues: improve DPI detection and fix aspect ratio distortion
+[33mf74bff4[m Optimize mobile DPI: force 3x DPI for mobile devices to reduce aliasing
+[33m37ae740[m Optimize rendering quality: add high DPI support and anti-aliasing
