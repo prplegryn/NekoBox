@@ -323,15 +323,45 @@ class CharacterViewer {
         }
     }
 
-    // 🎯 视线跟踪功能 - 让角色跟随鼠标/触摸移动视线
+    // 🎯 视线跟踪功能 - 让角色跟随鼠标/触摸移动视线，默认看向前方
     setupEyeTracking() {
         if (!this.player) return;
+
+        let isTracking = false;
+        let resetTimeout = null;
+
+        // 🎯 重置视线到前方
+        const resetEyeTracking = () => {
+            try {
+                // 重置所有视线跟踪变量到0（前方）
+                this.player.setVariableDiff('eyetrack', 'face_eye_LR', 0, 800, -1);
+                this.player.setVariableDiff('eyetrack', 'face_eye_UD', 0, 800, -1);
+                this.player.setVariableDiff('eyetrack', 'head_slant', 0, 1000, -1);
+                this.player.setVariableDiff('eyetrack', 'head_LR', 0, 1000, -1);
+                this.player.setVariableDiff('eyetrack', 'head_UD', 0, 1000, -1);
+                this.player.setVariableDiff('eyetrack', 'body_slant', 0, 1500, -1);
+                this.player.setVariableDiff('eyetrack', 'body_LR', 0, 1500, -1);
+                this.player.setVariableDiff('eyetrack', 'body_UD', 0, 1500, -1);
+                
+                isTracking = false;
+                console.log('视线已重置到前方');
+            } catch (error) {
+                console.warn('重置视线失败:', error);
+            }
+        };
 
         const eyeTrackingReaction = (ev) => {
             try {
                 const eyePosition = this.player.getMarkerPosition('eye');
                 if (!eyePosition) return;
 
+                // 清除重置定时器
+                if (resetTimeout) {
+                    clearTimeout(resetTimeout);
+                    resetTimeout = null;
+                }
+
+                isTracking = true;
                 const mouseOffsetX = ev.clientX - eyePosition.clientX;
                 const mouseOffsetY = ev.clientY - eyePosition.clientY;
                 const angle = Math.atan2(mouseOffsetY, mouseOffsetX);
@@ -361,14 +391,41 @@ class CharacterViewer {
             }
         };
 
+        // 🎯 鼠标离开画布时重置视线
+        const handleMouseLeave = () => {
+            if (isTracking) {
+                resetTimeout = setTimeout(resetEyeTracking, 500); // 500ms后重置
+            }
+        };
+
+        // 🎯 鼠标进入画布时取消重置
+        const handleMouseEnter = () => {
+            if (resetTimeout) {
+                clearTimeout(resetTimeout);
+                resetTimeout = null;
+            }
+        };
+
         // 绑定鼠标移动事件
         this.canvas.onmousemove = eyeTrackingReaction;
+        this.canvas.onmouseleave = handleMouseLeave;
+        this.canvas.onmouseenter = handleMouseEnter;
 
         // 绑定移动端触摸移动事件
         this.canvas.addEventListener('touchmove', (ev) => {
             eyeTrackingReaction(ev.touches[0]);
             ev.preventDefault();
         }, false);
+
+        // 🎯 移动端触摸结束时重置视线
+        this.canvas.addEventListener('touchend', () => {
+            if (isTracking) {
+                resetTimeout = setTimeout(resetEyeTracking, 800); // 800ms后重置
+            }
+        }, false);
+
+        // 🎯 初始化时重置视线到前方
+        setTimeout(resetEyeTracking, 1000);
     }
 
     // 🎯 触摸交互功能 - 点击角色不同部位产生不同反应
