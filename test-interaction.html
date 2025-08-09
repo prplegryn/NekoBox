@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>交互功能测试</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            background: #000;
+            color: white;
+            font-family: Arial, sans-serif;
+        }
+        #canvas {
+            border: 2px solid #333;
+            margin: 20px 0;
+        }
+        .info {
+            background: rgba(255,255,255,0.1);
+            padding: 15px;
+            border-radius: 10px;
+            margin: 10px 0;
+        }
+        .test-buttons {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin: 20px 0;
+        }
+        .test-button {
+            padding: 10px 15px;
+            background: #007AFF;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        .test-button:hover {
+            background: #0056CC;
+        }
+    </style>
+</head>
+<body>
+    <h1>🎯 交互功能测试</h1>
+    
+    <div class="info">
+        <h3>测试说明：</h3>
+        <ul>
+            <li>🎯 <strong>视线跟踪</strong>：移动鼠标，角色应该跟随鼠标移动视线</li>
+            <li>👆 <strong>点击交互</strong>：点击角色胸部区域（生气反应）或眼睛区域（困惑反应）</li>
+            <li>😊 <strong>表情按钮</strong>：点击下方按钮测试不同表情</li>
+            <li>📱 <strong>移动端</strong>：在手机上测试触摸交互</li>
+        </ul>
+    </div>
+
+    <canvas id="canvas" width="640" height="480"></canvas>
+
+    <div class="test-buttons">
+        <button class="test-button" onclick="testEmotion('平常')">平常</button>
+        <button class="test-button" onclick="testEmotion('怒る01')">生气</button>
+        <button class="test-button" onclick="testEmotion('困る00')">困惑</button>
+        <button class="test-button" onclick="testEmotion('びっくり2')">惊讶</button>
+        <button class="test-button" onclick="testEmotion('いやいや')">摇头</button>
+        <button class="test-button" onclick="testEmotion('ひく')">退缩</button>
+    </div>
+
+    <div class="info">
+        <h3>调试信息：</h3>
+        <div id="debug-info">等待加载...</div>
+    </div>
+
+    <script src="driver/FreeMoteDriver.js"></script>
+    <script src="driver/emoteplayer.js"></script>
+    <script>
+        let player = null;
+        let debugInfo = document.getElementById('debug-info');
+
+        function updateDebugInfo(text) {
+            debugInfo.innerHTML += '<br>' + new Date().toLocaleTimeString() + ': ' + text;
+            debugInfo.scrollTop = debugInfo.scrollHeight;
+        }
+
+        async function init() {
+            try {
+                updateDebugInfo('开始初始化...');
+                
+                // 初始化播放器
+                EmotePlayer.createRenderCanvas(640, 480);
+                const canvas = document.getElementById('canvas');
+                player = new EmotePlayer(canvas);
+                player.scale = 1.0;
+                
+                updateDebugInfo('加载角色数据...');
+                
+                // 加载角色数据
+                await player.promiseLoadDataFromURL('data/choco.psb');
+                
+                updateDebugInfo('设置默认表情...');
+                player.mainTimelineLabel = '平常';
+                
+                updateDebugInfo('设置交互功能...');
+                setupEyeTracking();
+                setupTouchReactions();
+                
+                updateDebugInfo('✅ 初始化完成！现在可以测试交互功能了');
+                
+            } catch (error) {
+                updateDebugInfo('❌ 初始化失败: ' + error.message);
+                console.error(error);
+            }
+        }
+
+        // 视线跟踪功能
+        function setupEyeTracking() {
+            const eyeTrackingReaction = (ev) => {
+                try {
+                    const eyePosition = player.getMarkerPosition('eye');
+                    if (!eyePosition) return;
+
+                    const mouseOffsetX = ev.clientX - eyePosition.clientX;
+                    const mouseOffsetY = ev.clientY - eyePosition.clientY;
+                    const angle = Math.atan2(mouseOffsetY, mouseOffsetX);
+                    const len = Math.sqrt(mouseOffsetX ** 2 + mouseOffsetY ** 2);
+                    const c = Math.cos(angle);
+                    const s = Math.sin(angle);
+
+                    // 视线跟踪
+                    player.setVariableDiff('eyetrack', 'face_eye_LR', len / 3 * c, 500, -1);
+                    player.setVariableDiff('eyetrack', 'face_eye_UD', len / 3 * s, 500, -1);
+
+                    // 头部跟踪
+                    if (len > 60) {
+                        player.setVariableDiff('eyetrack', 'head_slant', len / 12 * c, 1000, -1);
+                        player.setVariableDiff('eyetrack', 'head_LR', len / 6 * c, 1000, -1);
+                        player.setVariableDiff('eyetrack', 'head_UD', len / 6 * s, 1000, -1);
+                    }
+
+                    // 身体跟踪
+                    if (len > 120) {
+                        player.setVariableDiff('eyetrack', 'body_slant', len / 18 * c, 2000, -1);
+                        player.setVariableDiff('eyetrack', 'body_LR', len / 9 * c, 2000, -1);
+                        player.setVariableDiff('eyetrack', 'body_UD', len / 9 * s, 2000, -1);
+                    }
+                } catch (error) {
+                    console.warn('视线跟踪失败:', error);
+                }
+            };
+
+            canvas.onmousemove = eyeTrackingReaction;
+            canvas.addEventListener('touchmove', (ev) => {
+                eyeTrackingReaction(ev.touches[0]);
+                ev.preventDefault();
+            }, false);
+        }
+
+        // 触摸交互功能
+        function setupTouchReactions() {
+            let touching = false;
+
+            const touchReaction = (ev) => {
+                if (touching) return;
+
+                try {
+                    const bustPosition = player.getMarkerPosition('bust');
+                    const eyePosition = player.getMarkerPosition('eye');
+
+                    if (!bustPosition || !eyePosition) return;
+
+                    const bustLength = Math.sqrt((bustPosition.clientX - ev.clientX) ** 2 + (bustPosition.clientY - ev.clientY) ** 2);
+                    const eyeLength = Math.sqrt((eyePosition.clientX - ev.clientX) ** 2 + (eyePosition.clientY - ev.clientY) ** 2);
+
+                    // 点击胸部区域
+                    if (bustLength < 50) {
+                        touching = true;
+                        updateDebugInfo('👆 点击胸部区域 - 生气反应');
+                        player.mainTimelineLabel = '怒る01';
+                        player.diffTimelineSlot1 = 'びっくり2';
+                        player.diffTimelineSlot2 = 'いやいや';
+                        player.setVariable('arm_type', 2, 300);
+
+                        setTimeout(() => {
+                            touching = false;
+                            player.mainTimelineLabel = '平常';
+                            player.diffTimelineSlot1 = '';
+                            player.diffTimelineSlot2 = '';
+                            player.setVariable('arm_type', 0, 300);
+                        }, 1500);
+                    }
+                    // 点击眼睛区域
+                    else if (eyeLength < 30) {
+                        touching = true;
+                        updateDebugInfo('👆 点击眼睛区域 - 困惑反应');
+                        player.mainTimelineLabel = '困る00';
+                        player.diffTimelineSlot1 = 'ひく';
+                        player.setVariable('face_eye_open', 32);
+
+                        setTimeout(() => {
+                            touching = false;
+                            player.mainTimelineLabel = '平常';
+                            player.diffTimelineSlot1 = '';
+                            player.setVariable('face_eye_open', 0);
+                        }, 1000);
+                    }
+                } catch (error) {
+                    console.warn('触摸交互失败:', error);
+                }
+            };
+
+            canvas.onclick = touchReaction;
+            canvas.addEventListener('touchstart', (ev) => {
+                touchReaction(ev.touches[0]);
+                ev.preventDefault();
+            }, false);
+        }
+
+        // 测试表情功能
+        function testEmotion(emotion) {
+            if (!player) {
+                updateDebugInfo('❌ 播放器未初始化');
+                return;
+            }
+            
+            try {
+                updateDebugInfo('😊 播放表情: ' + emotion);
+                player.mainTimelineLabel = emotion;
+                player.diffTimelineSlot1 = '';
+                player.diffTimelineSlot2 = '';
+                player.diffTimelineSlot3 = '';
+                player.diffTimelineSlot4 = '';
+                player.setVariable('arm_type', 0, 300);
+                player.setVariable('face_eye_open', 0, 300);
+            } catch (error) {
+                updateDebugInfo('❌ 播放表情失败: ' + error.message);
+            }
+        }
+
+        // 页面加载完成后初始化
+        document.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>
+

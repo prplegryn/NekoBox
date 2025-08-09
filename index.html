@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>人物立绘展示</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            overflow: hidden;
+            background: #000;
+            font-family: Arial, sans-serif;
+        }
+
+        #canvas {
+            display: block;
+            width: 100vw;
+            height: 100vh;
+            cursor: pointer;
+        }
+
+        .menu-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(10px);
+            display: none;
+            z-index: 1000;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .menu-content {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            padding: 30px;
+            max-width: 90vw;
+            max-height: 80vh;
+            overflow-y: auto;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        }
+
+        .menu-section {
+            margin-bottom: 25px;
+        }
+
+        .menu-title {
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 15px;
+            color: #333;
+        }
+
+        .scale-control {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .scale-slider {
+            flex: 1;
+            height: 6px;
+            border-radius: 3px;
+            background: #ddd;
+            outline: none;
+            -webkit-appearance: none;
+        }
+
+        .scale-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #007AFF;
+            cursor: pointer;
+        }
+
+        .scale-value {
+            min-width: 60px;
+            text-align: center;
+            font-weight: bold;
+            color: #007AFF;
+        }
+
+        .button-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .menu-button {
+            padding: 12px 8px;
+            border: none;
+            border-radius: 10px;
+            background: #007AFF;
+            color: white;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .menu-button:hover {
+            background: #0056CC;
+            transform: translateY(-2px);
+        }
+
+        .menu-button:active {
+            transform: translateY(0);
+        }
+
+        .character-select {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+            gap: 10px;
+        }
+
+        .character-button {
+            padding: 15px 10px;
+            border: 2px solid #007AFF;
+            border-radius: 10px;
+            background: white;
+            color: #007AFF;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .character-button.active {
+            background: #007AFF;
+            color: white;
+        }
+
+        .character-button:hover {
+            background: #007AFF;
+            color: white;
+        }
+
+        .close-button {
+            width: 100%;
+            padding: 15px;
+            border: none;
+            border-radius: 10px;
+            background: #FF3B30;
+            color: white;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .close-button:hover {
+            background: #D70015;
+        }
+
+        .loading {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: #000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 2000;
+        }
+
+        .loading-content {
+            text-align: center;
+            color: white;
+        }
+
+        .loading-spinner {
+            width: 50px;
+            height: 50px;
+            border: 3px solid #333;
+            border-top: 3px solid #007AFF;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        @media (max-width: 768px) {
+            .menu-content {
+                padding: 20px;
+                max-width: 95vw;
+            }
+            
+            .button-grid {
+                grid-template-columns: repeat(auto-fit, minmax(70px, 1fr));
+            }
+            
+            .character-select {
+                grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- 加载界面 -->
+    <div id="loading" class="loading">
+        <div class="loading-content">
+            <div class="loading-spinner"></div>
+            <div id="loading-text">正在加载人物立绘文件...</div>
+        </div>
+    </div>
+
+    <!-- 主画布 -->
+    <canvas id="canvas" width="640" height="480"></canvas>
+
+    <!-- 菜单覆盖层 -->
+    <div id="menuOverlay" class="menu-overlay">
+        <div class="menu-content">
+            <!-- 缩放控制 -->
+            <div class="menu-section">
+                <div class="menu-title">缩放控制</div>
+                <div class="scale-control">
+                    <!-- 🎯 缩放滑块默认值 - 修改value属性来改变滑块初始位置 -->
+                    <input type="range" id="scaleSlider" class="scale-slider" min="0.1" max="3" step="0.1" value="1.0" data-config="scaleRange">
+                    <div id="scaleValue" class="scale-value">100%</div>
+                </div>
+            </div>
+
+            <!-- 表情动作按钮 -->
+            <div class="menu-section">
+                <div class="menu-title">表情动作</div>
+                <div id="emotionButtons" class="button-grid">
+                    <!-- 动态生成的表情按钮 -->
+                </div>
+            </div>
+
+            <!-- 人物选择 -->
+            <div class="menu-section">
+                <div class="menu-title">人物选择</div>
+                <div id="characterButtons" class="character-select">
+                    <!-- 动态生成的人物按钮 -->
+                </div>
+            </div>
+
+            <!-- 关闭按钮 -->
+            <button id="closeButton" class="close-button">关闭菜单</button>
+        </div>
+    </div>
+
+    <!-- 引入配置文件 -->
+    <script src="config.js"></script>
+    <!-- 引入 FreeMote 驱动 -->
+    <script src="driver/FreeMoteDriver.js"></script>
+    <script src="driver/emoteplayer.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>

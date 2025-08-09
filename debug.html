@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>显示调试</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            overflow: hidden;
+            background: #000;
+            font-family: Arial, sans-serif;
+        }
+
+        #canvas {
+            display: block;
+            width: 100vw;
+            height: 100vh;
+            cursor: pointer;
+            border: 2px solid red;
+        }
+
+        .debug-info {
+            position: fixed;
+            top: 10px;
+            left: 10px;
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 15px;
+            border-radius: 10px;
+            font-size: 14px;
+            z-index: 1001;
+            max-width: 300px;
+        }
+
+        .debug-info h3 {
+            margin-bottom: 10px;
+            color: #007AFF;
+        }
+
+        .debug-info p {
+            margin: 5px 0;
+        }
+
+        .test-button {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            background: #007AFF;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            z-index: 1001;
+        }
+    </style>
+</head>
+<body>
+    <!-- 调试信息 -->
+    <div class="debug-info" id="debugInfo">
+        <h3>显示调试信息</h3>
+        <p id="screenInfo">屏幕尺寸: 加载中...</p>
+        <p id="canvasInfo">画布尺寸: 加载中...</p>
+        <p id="windowInfo">窗口尺寸: 加载中...</p>
+        <p id="deviceInfo">设备像素比: 加载中...</p>
+    </div>
+
+    <button class="test-button" onclick="updateDebugInfo()">刷新信息</button>
+
+    <!-- 主画布 -->
+    <canvas id="canvas" width="640" height="480"></canvas>
+
+    <script>
+        function updateDebugInfo() {
+            const screenInfo = document.getElementById('screenInfo');
+            const canvasInfo = document.getElementById('canvasInfo');
+            const windowInfo = document.getElementById('windowInfo');
+            const deviceInfo = document.getElementById('deviceInfo');
+            const canvas = document.getElementById('canvas');
+
+            // 屏幕信息
+            screenInfo.textContent = `屏幕尺寸: ${screen.width}x${screen.height}`;
+            
+            // 窗口信息
+            windowInfo.textContent = `窗口尺寸: ${window.innerWidth}x${window.innerHeight}`;
+            
+            // 画布信息
+            canvasInfo.textContent = `画布尺寸: ${canvas.width}x${canvas.height}`;
+            
+            // 设备像素比
+            deviceInfo.textContent = `设备像素比: ${window.devicePixelRatio}`;
+
+            // 绘制测试图案
+            const ctx = canvas.getContext('2d');
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // 绘制网格
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
+            ctx.lineWidth = 1;
+            
+            // 垂直网格线
+            for (let x = 0; x <= canvas.width; x += 50) {
+                ctx.beginPath();
+                ctx.moveTo(x, 0);
+                ctx.lineTo(x, canvas.height);
+                ctx.stroke();
+            }
+            
+            // 水平网格线
+            for (let y = 0; y <= canvas.height; y += 50) {
+                ctx.beginPath();
+                ctx.moveTo(0, y);
+                ctx.lineTo(canvas.width, y);
+                ctx.stroke();
+            }
+            
+            // 绘制中心十字
+            ctx.strokeStyle = 'red';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(canvas.width / 2, 0);
+            ctx.lineTo(canvas.width / 2, canvas.height);
+            ctx.moveTo(0, canvas.height / 2);
+            ctx.lineTo(canvas.width, canvas.height / 2);
+            ctx.stroke();
+            
+            // 绘制45%位置线（人物居中位置）
+            ctx.strokeStyle = 'blue';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(0, canvas.height * 0.45);
+            ctx.lineTo(canvas.width, canvas.height * 0.45);
+            ctx.stroke();
+            
+            // 添加文字标注
+            ctx.fillStyle = 'white';
+            ctx.font = '16px Arial';
+            ctx.fillText(`中心点 (${canvas.width/2}, ${canvas.height/2})`, 10, 30);
+            ctx.fillText(`人物位置 (${canvas.width/2}, ${Math.round(canvas.height * 0.45)})`, 10, 50);
+        }
+
+        // 页面加载完成后初始化
+        document.addEventListener('DOMContentLoaded', () => {
+            // 设置画布尺寸为窗口尺寸
+            const canvas = document.getElementById('canvas');
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            
+            // 更新调试信息
+            updateDebugInfo();
+            
+            // 监听窗口大小变化
+            window.addEventListener('resize', () => {
+                canvas.width = window.innerWidth;
+                canvas.height = window.innerHeight;
+                updateDebugInfo();
+            });
+        });
+    </script>
+</body>
+</html>
+
